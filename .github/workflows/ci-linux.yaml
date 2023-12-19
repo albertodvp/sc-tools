@@ -98,23 +98,15 @@ jobs:
       # TODO document why this is after the previous step
       - name: Set up cabal.project.local
         run: |
-          echo "package cardano-crypto-praos" > cabal.project.local
+          echo "package cardano-crypto-praos" >> cabal.project.local
           echo "  flags: -external-libsodium-vrf" >> cabal.project.local
-          
-      - name: Configure the build
-        run: |
-          cabal configure --enable-tests --enable-documentation
-          # The step generates dist-newstyle/cache/plan.json for the cache key.          
-          cabal build all --dry-run
-
           
       - name: Restore cached dependencies (todo name)
         uses: actions/cache@v3
         id: cache
         with:
           path: ${{ steps.setup.outputs.cabal-store }}
-          key: ${{ hashFiles('**/plan.json') }}
-
+          key: ${{ hashFiles('**/*.cabal', '**/cabal.project') }}
       - name: Install dependencies
         # If we had an exact cache hit, the dependencies will be up to date.
         if: steps.cache.outputs.cache-hit != 'true'
@@ -130,18 +122,12 @@ jobs:
         with:
           ghc-version: '8.10'
           cabal-version: '3.6.0.0'
-      - name: Configure the build
-        run: |
-          cabal configure --enable-tests --enable-documentation
-          # The step generates dist-newstyle/cache/plan.json for the cache key.          
-          cabal build all --dry-run
       - name: cached dependencies
         uses: actions/cache@v3
         id: cache
-        fail-on-cache-miss: true
         with:
           path: ${{ steps.setup.outputs.cabal-store }}
-          key: ${{ hashFiles('**/plan.json') }}
+          key: ${{ hashFiles('**/*.cabal', '**/cabal.project') }}          
       - name: Build dependencies for integration test
         run: |
           cabal install -j cardano-node cardano-cli --overwrite-policy=always
