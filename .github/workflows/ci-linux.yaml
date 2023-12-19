@@ -6,6 +6,14 @@ on:
       - '.github/workflows/ci-linux.yaml'
       - 'cabal.project'
       - '*/src/**'
+
+# INFO: The following configuration block ensures that only one build runs per branch,
+# which may be desirable for projects with a costly build process.
+# Remove this block from the CI workflow to let each CI job run to completion.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,7 +27,7 @@ jobs:
       # cache libsodium
       - name: cache libsodium-1.0.18
         id: libsodium
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/libsodium-stable
           key: ${{ runner.os }}-libsodium-1.0.18
@@ -44,7 +52,7 @@ jobs:
       # cache secp256K1
       - name: cache libsecp256k1
         id: libsecp256k1
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/secp256k1
           key: libsecp256k1
@@ -79,40 +87,65 @@ jobs:
           echo "LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: haskell/actions/setup@v2
-        id: setuphaskell
+      - uses: haskell-actions/setup@v2
+        id: setup
         with:
           ghc-version: '8.10' # Resolves to the latest point release of GHC 8.10
           cabal-version: '3.6.0.0' # Exact version of Cabal
 
-      - name: Cache .cabal
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.setuphaskell.outputs.cabal-store }}
-          key: cabal-${{ hashFiles('cabal.project') }}
-
+      # TODO document why this is after the previous step
       - name: Set up cabal.project.local
         run: |
           echo "package cardano-crypto-praos" > cabal.project.local
           echo "  flags: -external-libsodium-vrf" >> cabal.project.local
-
-      - name: Build dependencies for integration test
+          
+      - name: Configure the build
         run: |
-          cabal update
-          cabal install -j cardano-node cardano-cli --overwrite-policy=always
-          cabal install -j convex-wallet --overwrite-policy=always
-          echo "/home/runner/.cabal/bin" >> $GITHUB_PATH
+          cabal configure --enable-tests --enable-documentation
+          # The step generates dist-newstyle/cache/plan.json for the cache key.          
+          cabal build all --dry-run
 
-      - name: build & test
-        run: |
-          cabal build -j all
-          cabal test all
-          cabal haddock -j all
+          
+      - name: Restore cached dependencies (todo name)
+        uses: actions/cache@v3
+        id: cache
+        with:
+          path: ${{ steps.setup.outputs.cabal-store }}
+          key: ${{ hashFiles('**/plan.json') }}
+
+      - name: Install dependencies
+        # If we had an exact cache hit, the dependencies will be up to date.
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cabal build all --only-dependencies
+
   test:
     needs: build
     runs-on: ubuntu-latest      
     steps:
-      - run: echo 42
-
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        id: setup
+        with:
+          ghc-version: '8.10'
+          cabal-version: '3.6.0.0'
+      - name: Configure the build
+        run: |
+          cabal configure --enable-tests --enable-documentation
+          # The step generates dist-newstyle/cache/plan.json for the cache key.          
+          cabal build all --dry-run
+      - name: cached dependencies
+        uses: actions/cache@v3
+        id: cache
+        fail-on-cache-miss: true
+        with:
+          path: ${{ steps.setup.outputs.cabal-store }}
+          key: ${{ hashFiles('**/plan.json') }}
+      - name: Build dependencies for integration test
+        run: |
+          cabal install -j cardano-node cardano-cli --overwrite-policy=always
+          cabal install -j convex-wallet --overwrite-policy=always
+          echo "/home/runner/.cabal/bin" >> $GITHUB_PATH
+      - name: Test all
+        run: cabal test all
