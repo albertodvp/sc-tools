@@ -100,9 +100,9 @@ jobs:
           echo "package cardano-crypto-praos" >> cabal.project.local
           echo "  flags: -external-libsodium-vrf" >> cabal.project.local
           
-      - name: Restore cached dependencies (todo name)
+      - name: Cached Dependencies
         uses: actions/cache@v2
-        id: cabalcache
+        id: cabal-cache
         with:
           path: |
             cabal.project.local
@@ -110,7 +110,7 @@ jobs:
             
           key: ${{ hashFiles('**/*.cabal', '**/cabal.project') }}
       - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cabal-cache.outputs.cache-hit != 'true'
         run: cabal build all --only-dependencies
 
   test:
@@ -123,9 +123,9 @@ jobs:
         with:
           ghc-version: '8.10'
           cabal-version: '3.6.0.0'
-      - name: cached dependencies
+      - name: Cached Dependencies
         uses: actions/cache@v2
-        id: cache
+        id: cabal-cache
         with:
           path: |
             cabal.project.local
