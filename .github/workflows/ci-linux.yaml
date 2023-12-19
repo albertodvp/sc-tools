@@ -27,7 +27,7 @@ jobs:
       # cache libsodium
       - name: cache libsodium-1.0.18
         id: libsodium
-        uses: actions/cache@v3
+        uses: actions/cache@v2
         with:
           path: ~/libsodium-stable
           key: ${{ runner.os }}-libsodium-1.0.18
@@ -52,7 +52,7 @@ jobs:
       # cache secp256K1
       - name: cache libsecp256k1
         id: libsecp256k1
-        uses: actions/cache@v3
+        uses: actions/cache@v2
         with:
           path: ~/secp256k1
           key: libsecp256k1
@@ -95,20 +95,21 @@ jobs:
           ghc-version: '8.10' # Resolves to the latest point release of GHC 8.10
           cabal-version: '3.6.0.0' # Exact version of Cabal
 
-      # TODO document why this is after the previous step
       - name: Set up cabal.project.local
         run: |
           echo "package cardano-crypto-praos" >> cabal.project.local
           echo "  flags: -external-libsodium-vrf" >> cabal.project.local
           
       - name: Restore cached dependencies (todo name)
-        uses: actions/cache@v3
-        id: cache
+        uses: actions/cache@v2
+        id: cabalcache
         with:
-          path: ${{ steps.setup.outputs.cabal-store }}
+          path: |
+            cabal.project.local
+            ${{ steps.setup.outputs.cabal-store }}
+            
           key: ${{ hashFiles('**/*.cabal', '**/cabal.project') }}
       - name: Install dependencies
-        # If we had an exact cache hit, the dependencies will be up to date.
         if: steps.cache.outputs.cache-hit != 'true'
         run: cabal build all --only-dependencies
 
@@ -123,11 +124,13 @@ jobs:
           ghc-version: '8.10'
           cabal-version: '3.6.0.0'
       - name: cached dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v2
         id: cache
         with:
-          path: ${{ steps.setup.outputs.cabal-store }}
-          key: ${{ hashFiles('**/*.cabal', '**/cabal.project') }}          
+          path: |
+            cabal.project.local
+            ${{ steps.setup.outputs.cabal-store }}
+          key: ${{ hashFiles('**/*.cabal', '**/cabal.project', 'cabal.project.local') }}          
       - name: Build dependencies for integration test
         run: |
           cabal install -j cardano-node cardano-cli --overwrite-policy=always
