@@ -60,7 +60,7 @@ jobs:
           sudo make install
           cd -
 
-      # download & install secp256k1
+      # download & install secp256k1 without cache
       - name: Install libsecp256k1
         if: steps.libsecp256k1.outputs.cache-hit != 'true'
         run: |
@@ -110,4 +110,9 @@ jobs:
           cabal build -j all
           cabal test all
           cabal haddock -j all
+  test:
+    needs: build
+    runs-on: ubuntu-latest      
+    steps:
+      - run: echo 42
 
