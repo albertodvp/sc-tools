@@ -50,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Setup libsodium and libsecp256k1
-      - uses: ./.github/actions/setup_security_libs/
+      - uses: .github/actions/setup_security_libs
       - uses: haskell-actions/setup@v2
         id: setup
         with:
