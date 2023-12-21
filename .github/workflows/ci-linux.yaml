@@ -3,10 +3,10 @@ on:
   pull_request:
     
   push:
-    # paths:
-    #   - '.github/workflows/ci-linux.yaml'
-    #   - 'cabal.project'
-    #   - '*/src/**'
+    paths:
+      - '.github/workflows/ci-linux.yaml'
+      - 'cabal.project'
+      - '*/src/**'
 
 # INFO: The following configuration block ensures that only one build runs per branch,
 # which may be desirable for projects with a costly build process.
@@ -72,3 +72,50 @@ jobs:
           echo "/home/runner/.cabal/bin" >> $GITHUB_PATH
       - name: Test all
         run: cabal test all
+
+  build-all:
+    needs: build
+    runs-on: ubuntu-latest      
+    steps:
+      - uses: actions/checkout@v4
+      # Setup libsodium and libsecp256k1
+      - uses: ./.github/actions/setup-security-libs
+      - uses: haskell-actions/setup@v2
+        id: setup
+        with:
+          ghc-version: '8.10'
+          cabal-version: '3.6.0.0'
+      - name: Cached Dependencies
+        uses: actions/cache@v2
+        id: cabal-cache
+        with:
+          path: |
+            cabal.project.local
+            ${{ steps.setup.outputs.cabal-store }}
+          key: ${{ hashFiles('**/*.cabal', '**/cabal.project', 'cabal.project.local') }}          
+      - name: Build all
+        run: cabal build -j all
+        
+  build-documentation:
+    needs: build
+    runs-on: ubuntu-latest      
+    steps:
+      - uses: actions/checkout@v4
+      # Setup libsodium and libsecp256k1
+      - uses: ./.github/actions/setup-security-libs
+      - uses: haskell-actions/setup@v2
+        id: setup
+        with:
+          ghc-version: '8.10'
+          cabal-version: '3.6.0.0'
+      - name: Cached Dependencies
+        uses: actions/cache@v2
+        id: cabal-cache
+        with:
+          path: |
+            cabal.project.local
+            ${{ steps.setup.outputs.cabal-store }}
+          key: ${{ hashFiles('**/*.cabal', '**/cabal.project', 'cabal.project.local') }}          
+      - name: Build all
+        run: cabal haddock -j all
+        
