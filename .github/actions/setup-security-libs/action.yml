@@ -11,7 +11,6 @@ runs:
           sudo apt-get install -y libsystemd-dev
       # cache libsodium
       - name: cache libsodium-1.0.18
-        shell: bash        
         id: libsodium
         uses: actions/cache@v2
         with:
@@ -20,13 +19,13 @@ runs:
 
       # install libsodium with cache
       - name: Install cache libsodium-1.0.18
-        shell: bash        
+        shell: bash
         if: steps.libsodium.outputs.cache-hit == 'true'
         run: cd ~/libsodium-stable && ./configure && make -j2 && sudo make install
 
       # download & install libsodium without cache
       - name: Install libsodium
-        shell: bash        
+        shell: bash
         if: steps.libsodium.outputs.cache-hit != 'true'
         run: |
           wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.18-stable.tar.gz
@@ -39,7 +38,6 @@ runs:
 
       # cache secp256K1
       - name: cache libsecp256k1
-        shell: bash        
         id: libsecp256k1
         uses: actions/cache@v2
         with:
@@ -48,7 +46,7 @@ runs:
 
       # install libsecp256k1 with cache
       - name: Install cache libsecp256k1
-        shell: bash        
+        shell: bash
         if: steps.libsecp256k1.outputs.cache-hit == 'true'
         run: |
           cd ~/secp256k1
@@ -60,7 +58,7 @@ runs:
 
       # download & install secp256k1 without cache
       - name: Install libsecp256k1
-        shell: bash        
+        shell: bash
         if: steps.libsecp256k1.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/bitcoin-core/secp256k1 ~/secp256k1
@@ -74,7 +72,7 @@ runs:
 
       # set up environment variables
       - name: Setup environment variables
-        shell: bash        
+        shell: bash
         run: |
           echo "LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
