@@ -1,5 +1,6 @@
 name: Setup security libs
 description: Setup libsodium and libsecp256k1
+shell: bash
 runs:
   using: "composite"
   steps:
