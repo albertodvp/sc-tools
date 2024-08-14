@@ -17,12 +17,14 @@ import           Data.Ratio                     ((%))
 
 {-| Run the 'Mockchain' action with registered pool
 -}
-registerPool :: forall m. (MonadIO m, MonadMockchain m, MonadError (BalanceTxError Convex.CoinSelection.ERA) m, MonadFail m) => Wallet -> m C.PoolId
-registerPool wallet = do
-  stakeKey <- C.generateSigningKey C.AsStakeKey
-  vrfKey <- C.generateSigningKey C.AsVrfKey
-  stakePoolKey <- C.generateSigningKey C.AsStakePoolKey
-
+registerPoolWithKeys :: forall m. 
+  (MonadMockchain m, MonadError (BalanceTxError Convex.CoinSelection.ERA) m, MonadFail m) 
+  => C.SigningKey C.StakeKey
+  -> C.SigningKey C.VrfKey
+  -> C.SigningKey C.StakePoolKey
+  -> Wallet
+  -> m C.PoolId
+registerPoolWithKeys stakeKey vrfKey stakePoolKey wallet = do
   let
     vrfHash =
       C.verificationKeyHash . C.getVerificationKey $ vrfKey
@@ -77,3 +79,13 @@ registerPool wallet = do
   void $ tryBalanceAndSubmit mempty wallet delegCertTx TrailingChange [C.WitnessStakeKey stakeKey]
 
   pure poolId
+
+{-| Run the 'Mockchain' action with registered pool generating keys 
+-}
+registerPool :: forall m. (MonadIO m, MonadMockchain m, MonadError (BalanceTxError Convex.CoinSelection.ERA) m, MonadFail m) => Wallet -> m C.PoolId
+registerPool wallet = do
+  stakeKey <- C.generateSigningKey C.AsStakeKey
+  vrfKey <- C.generateSigningKey C.AsVrfKey
+  stakePoolKey <- C.generateSigningKey C.AsStakePoolKey
+  registerPoolWithKeys stakeKey vrfKey stakePoolKey wallet
+  
